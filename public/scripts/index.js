@@ -81,7 +81,9 @@ try {
                     <td>${data.uploadedBy}</td>
                     <td>${formatter.format(data.uploadTime.seconds * 1000)}</td>
                     <td>${index === 0 ? "y" : "n"}</td>
-                    <td class="link"><a href="${url}">${doc.id}</a></td>
+                    <td class="download-link"><a href="${url}">${
+					doc.id
+				}</a></td>
                   </tr>`
 			);
 		});
