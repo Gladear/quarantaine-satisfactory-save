@@ -22,9 +22,9 @@
       h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
       h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px; }
       p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      a, button { text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      a.disabled, button:disabled { background: #cacaca; }
-      .box, a, button { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
+      button { text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
+      button:disabled { background: #cacaca; }
+      .box, button { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
       @media (max-width: 600px) {
         body, .box { margin-top: 0; background: white; box-shadow: none; }
         body { border-top: 16px solid #ffa100; }
@@ -38,7 +38,7 @@
       <p id="message"></p>
       <p id="current-owner"></p>
       <div>
-        <a id="download" class="disabled">Download</a>
+        <button id="download" disabled>Download</button>
         <button id="upload" disabled>Upload</button>
       </div>
     </div>
@@ -62,25 +62,6 @@
             localStorage.setItem('pseudo', pseudo);
           }
 
-          savesRef.orderBy('uploadTime', 'desc').limit(1).get()
-            .then(async (querySnapshot) => {
-              if (querySnapshot.empty) {
-                messageEl.textContent = 'Save not found';
-                uploadEl.disabled = false;
-                return;
-              }
-              const doc = querySnapshot.docs[0];
-              const save = doc.data();
-              if (save.ownedBy !== pseudo) {
-                currentOwnerEl.textContent = 'Currently owned by : ' + save.ownedBy;
-              } else {
-                const url = await storageRef.child(doc.id + '.sav').getDownloadURL();
-                downloadEl.href = url;
-                downloadEl.classList.remove('disabled');
-                uploadEl.disabled = false;
-              }
-            });
-
           uploadEl.addEventListener('click', async () => {
             const inputEl = document.createElement('input');
             inputEl.type = 'file';
@@ -89,7 +70,7 @@
               const file = inputEl.files[0];
               const newDoc = await savesRef.add({
                 uploadTime: new Date(),
-                ownedBy: pseudo,
+                uploadedBy: pseudo,
               });
               const fileRef = storageRef.child(newDoc.id + '.sav');
               messageEl.textContent = 'Upload in progress...';
@@ -97,6 +78,33 @@
               messageEl.textContent = 'Upload complete';
             };
             inputEl.click();
+          });
+
+          const querySnapshot = await savesRef.orderBy('uploadTime', 'desc').limit(1).get()
+          if (querySnapshot.empty) {
+            messageEl.textContent = 'Save not found';
+            uploadEl.disabled = false;
+            return;
+          }
+          const doc = querySnapshot.docs[0];
+          const save = doc.data();
+          let downloadUrl;
+          downloadEl.textContent = `Download (${save.uploadedBy})`;
+
+          if (save.ownedBy !== undefined && save.ownedBy !== pseudo) {
+            currentOwnerEl.textContent = 'Currently owned by : ' + save.ownedBy;
+          } else {
+            const url = await storageRef.child(doc.id + '.sav').getDownloadURL();
+            downloadId = doc.id;
+            downloadUrl = url;
+            downloadEl.disabled = false;
+            uploadEl.disabled = false;
+          }
+
+          downloadEl.addEventListener('click', async () => {
+            if (!downloadUrl) { messageEl.textContent = 'Unable to download file'; return; }
+            await doc.ref.update({ ownedBy: pseudo });
+            window.open(downloadUrl, '_blank');
           });
         } catch (e) {
           console.error(e);
