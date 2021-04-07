@@ -5,15 +5,20 @@ const historyEntriesEl = document.querySelector("#history-entries");
 
 try {
 	const app = firebase.app();
-	const storage = app.storage();
-	const storageRef = storage.ref();
+	const auth = app.auth();
+	const storageRef = app.storage().ref();
 	const db = app.firestore();
 	const savesRef = db.collection("saves");
+	const usersRef = db.collection("users");
 
-	let pseudo = localStorage.getItem("pseudo");
-	if (!pseudo) {
-		pseudo = prompt("Please enter your pseudo");
-		localStorage.setItem("pseudo", pseudo);
+	async function getUserRef({ uid, displayName }) {
+		const querySnapshot = await usersRef
+			.where("uid", "==", uid)
+			.limit(1)
+			.get();
+		return querySnapshot.empty
+			? await usersRef.add({ uid, displayName })
+			: querySnapshot.docs[0].ref;
 	}
 
 	uploadEl.addEventListener("click", async () => {
@@ -26,7 +31,7 @@ try {
 			const file = inputEl.files[0];
 			const newDoc = await savesRef.add({
 				uploadTime: new Date(),
-				uploadedBy: pseudo,
+				uploadedBy: await getUserRef(auth.currentUser),
 			});
 			const fileRef = storageRef.child(newDoc.id + ".sav");
 			messageEl.textContent = "Upload in progress...";
@@ -42,12 +47,16 @@ try {
 		historyEntriesEl.querySelector("td").textContent = "Not entry found";
 		uploadEl.disabled = false;
 	} else {
-		const lastDoc = querySnapshot.docs[0];
 		// Update UI with last save
+		const lastDoc = querySnapshot.docs[0];
 		const lastSave = lastDoc.data();
-		if (lastSave.ownedBy !== undefined && lastSave.ownedBy !== pseudo) {
+		const ownedBy = (await lastSave.ownedBy?.get())?.data();
+		if (
+			ownedBy !== undefined &&
+			(auth.currentUser === null || ownedBy.uid !== auth.currentUser.uid)
+		) {
 			document.querySelector("#current-owner").textContent =
-				"Currently owned by : " + lastSave.ownedBy;
+				"Currently owned by : " + ownedBy.displayName;
 		} else {
 			const url = await storageRef
 				.child(lastDoc.id + ".sav")
@@ -56,8 +65,10 @@ try {
 			uploadEl.disabled = false;
 
 			downloadEl.addEventListener("click", async () => {
-				await lastDoc.ref.update({ ownedBy: pseudo });
-				window.open(url, "_blank");
+				await lastDoc.ref.update({
+					ownedBy: await getUserRef(auth.currentUser),
+				});
+				window.open(url);
 			});
 		}
 
@@ -75,10 +86,11 @@ try {
 			const url = await storageRef
 				.child(doc.id + ".sav")
 				.getDownloadURL();
+			const uploadedBy = (await data.uploadedBy.get()).data();
 			historyEntriesEl.insertAdjacentHTML(
 				"beforeend",
 				`<tr>
-                    <td>${data.uploadedBy}</td>
+                    <td>${uploadedBy.displayName}</td>
                     <td>${formatter.format(data.uploadTime.seconds * 1000)}</td>
                     <td>${index === 0 ? "y" : "n"}</td>
                     <td class="download-link"><a href="${url}">${
