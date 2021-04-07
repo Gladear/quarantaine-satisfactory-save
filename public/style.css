@@ -1,0 +1,18 @@
+body {
+	padding-top: 10rem;
+	background: #eceff1;
+}
+
+.main-title {
+	font-size: 2rem;
+	margin-bottom: 0;
+}
+
+.card {
+	background: white;
+	max-width: 480px;
+	margin: 16px auto;
+	padding: 2rem 1.5rem;
+	border-radius: 3px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}

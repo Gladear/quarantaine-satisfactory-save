@@ -1,153 +1,59 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Satisfactory Shared Save</title>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Satisfactory Shared Save</title>
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/8.3.2/firebase-app.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/8.3.2/firebase-firestore.js"></script>
-    <script defer src="/__/firebase/8.3.2/firebase-storage.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+		<script defer src="/__/firebase/8.3.2/firebase-app.js"></script>
+		<script defer src="/__/firebase/8.3.2/firebase-firestore.js"></script>
+		<script defer src="/__/firebase/8.3.2/firebase-storage.js"></script>
+		<script defer src="/__/firebase/init.js?useEmulator=true"></script>
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 100px 0 0; }
-      .box { background: white; max-width: 480px; margin: 16px auto; padding: 32px 24px; border-radius: 3px; }
-      h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px; }
-      p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      button { text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      button:disabled { background: #cacaca; }
-      .box, button { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
-      td, th { padding: 0.5rem; border: 1px solid black; }
-      .link { max-width: 0rem; overflow: hidden; text-overflow: ellipsis; }
-    </style>
-  </head>
-  <body>
-    <div class="box">
-      <h2>Satisfactory Shared Save</h2>
-      <h1>amerique</h1>
-      <p id="message"></p>
-      <p id="current-owner"></p>
-      <div>
-        <button id="download" disabled>Download (latest)</button>
-        <button id="upload" disabled>Upload</button>
-      </div>
-    </div>
-    <details class="box">
-      <summary>History</summary>
-      <table>
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Upload date</th>
-            <th>Latest</th>
-            <th>Download</th>
-          </tr>
-        </thead>
-        <tbody id="history-entries">
-          <tr>
-            <td colspan="4">Loading...</td>
-          </tr>
-        </tbody>
-      </table>
-    </details>
-    <script>
-      document.addEventListener('DOMContentLoaded', async function () {
-        const messageEl = document.querySelector('#message');
-        const downloadEl = document.querySelector('#download');
-        const uploadEl = document.querySelector('#upload');
-        const historyEntriesEl = document.querySelector('#history-entries');
-        const historyEntryTmpl = document.querySelector('#history-entry');
+		<link
+			rel="stylesheet"
+			href="//fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic"
+		/>
+		<link
+			rel="stylesheet"
+			href="//cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.css"
+		/>
+		<link
+			rel="stylesheet"
+			href="//cdnjs.cloudflare.com/ajax/libs/milligram/1.3.0/milligram.css"
+		/>
 
-        try {
-          const app = firebase.app();
-          const storage = app.storage();
-          const storageRef = storage.ref();
-          const db = app.firestore();
-          const savesRef = db.collection('saves');
-
-          let pseudo = localStorage.getItem('pseudo');
-          if (!pseudo) {
-            pseudo = prompt('Please enter your pseudo');
-            localStorage.setItem('pseudo', pseudo);
-          }
-
-          uploadEl.addEventListener('click', async () => {
-            const inputEl = document.createElement('input');
-            inputEl.type = 'file';
-            inputEl.onchange = async () => {
-              if (inputEl.files.length === 0) { return; }
-              const file = inputEl.files[0];
-              const newDoc = await savesRef.add({
-                uploadTime: new Date(),
-                uploadedBy: pseudo,
-              });
-              const fileRef = storageRef.child(newDoc.id + '.sav');
-              messageEl.textContent = 'Upload in progress...';
-              await fileRef.put(file)
-              messageEl.textContent = 'Upload complete';
-            };
-            inputEl.click();
-          });
-
-          const querySnapshot = await savesRef.orderBy('uploadTime', 'desc').get()
-          if (querySnapshot.empty) {
-            messageEl.textContent = 'Save not found';
-            historyEntriesEl.querySelector('td').textContent = 'Not entry found';
-            uploadEl.disabled = false;
-            return;
-          }
-          const lastDoc = querySnapshot.docs[0];
-
-          // Update UI with last save
-          const lastSave = lastDoc.data();
-          let downloadUrl;
-
-          if (lastSave.ownedBy !== undefined && lastSave.ownedBy !== pseudo) {
-            document.querySelector('#current-owner').textContent = 'Currently owned by : ' + lastSave.ownedBy;
-          } else {
-            const url = await storageRef.child(lastDoc.id + '.sav').getDownloadURL();
-            downloadId = lastDoc.id;
-            downloadUrl = url;
-            downloadEl.disabled = false;
-            uploadEl.disabled = false;
-          }
-
-          downloadEl.addEventListener('click', async () => {
-            if (!downloadUrl) { messageEl.textContent = 'Unable to download file'; return; }
-            await lastDoc.ref.update({ ownedBy: pseudo });
-            window.open(downloadUrl, '_blank');
-          });
-
-          // Display history
-          const formatter = new Intl.DateTimeFormat(undefined, { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-          historyEntriesEl.innerHTML = '';
-          querySnapshot.docs.forEach(async (doc, index) => {
-            const data = doc.data();
-            const url = await storageRef.child(doc.id + '.sav').getDownloadURL();
-            historyEntriesEl.insertAdjacentHTML(
-              'beforeend',
-              `<tr>
-                <td>${data.uploadedBy}</td>
-                <td>${formatter.format(data.uploadTime.seconds * 1000)}</td>
-                <td>${index === 0 ? 'y' : 'n'}</td>
-                <td class="link"><a href="${url}">${doc.id}</a></td>
-              </tr>`
-            );
-          })
-        } catch (e) {
-          console.error(e);
-          messageEl.textContent = 'Error loading the Firebase SDK, check the console and report to the administrator.';
-        }
-      });
-    </script>
-  </body>
+		<link rel="stylesheet" href="style.css" />
+	</head>
+	<body>
+		<div class="card">
+			<h3 class="main-title">Satisfactory Shared Save</h3>
+			<h1>amerique</h1>
+			<p id="message"></p>
+			<p id="current-owner"></p>
+			<div>
+				<button id="download" disabled>Download (latest)</button>
+				<button id="upload" disabled>Upload</button>
+			</div>
+		</div>
+		<details class="card">
+			<summary>History</summary>
+			<table>
+				<thead>
+					<tr>
+						<th>User</th>
+						<th>Upload date</th>
+						<th>Latest</th>
+						<th>Download</th>
+					</tr>
+				</thead>
+				<tbody id="history-entries">
+					<tr>
+						<td colspan="4">Loading...</td>
+					</tr>
+				</tbody>
+			</table>
+		</details>
+		<script type="module" src="scripts/index.js"></script>
+	</body>
 </html>
