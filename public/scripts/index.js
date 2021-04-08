@@ -1,6 +1,7 @@
 const messageEl = document.querySelector("#message");
 const downloadEl = document.querySelector("#download");
 const uploadEl = document.querySelector("#upload");
+const authEl = document.querySelector("#auth");
 const historyEntriesEl = document.querySelector("#history-entries");
 
 try {
@@ -10,6 +11,17 @@ try {
 	const db = app.firestore();
 	const savesRef = db.collection("saves");
 	const usersRef = db.collection("users");
+
+	setTimeout(() => {
+		// Apparently, auth.currentUser isn't available directly, so just wait a bit...
+		if (auth.currentUser === null) {
+			authEl.href = "/login";
+			authEl.textContent = "Sign in";
+		} else {
+			authEl.href = "/logout";
+			authEl.textContent = `Sign out (${auth.currentUser.displayName})`;
+		}
+	}, 1000);
 
 	async function getUserRef({ uid, displayName }) {
 		const querySnapshot = await usersRef

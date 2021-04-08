@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Satisfactory Shared Save - Sign in</title>
+
+		<script defer src="/__/firebase/8.3.2/firebase-app.js"></script>
+		<script defer src="/__/firebase/8.3.2/firebase-auth.js"></script>
+		<script defer src="/__/firebase/init.js?useEmulator=true"></script>
+	</head>
+	<body>
+		<script>
+			window.addEventListener("DOMContentLoaded", () => {
+				firebase
+					.auth()
+					.signOut()
+					.then(() => location.assign("/"));
+			});
+		</script>
+	</body>
+</html>
