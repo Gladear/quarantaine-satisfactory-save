@@ -21,7 +21,7 @@ try {
 			authEl.href = "/logout";
 			authEl.textContent = `Sign out (${auth.currentUser.displayName})`;
 		}
-	}, 1000);
+	}, 300);
 
 	async function getUserRef({ uid, displayName }) {
 		const querySnapshot = await usersRef
@@ -49,6 +49,9 @@ try {
 			messageEl.textContent = "Upload in progress...";
 			await fileRef.put(file);
 			messageEl.textContent = "Upload complete";
+			setTimeout(() => {
+				location.reload();
+			}, 2000);
 		};
 		inputEl.click();
 	});
@@ -57,7 +60,7 @@ try {
 	if (querySnapshot.empty) {
 		messageEl.textContent = "No save found";
 		historyEntriesEl.querySelector("td").textContent = "Not entry found";
-		uploadEl.disabled = false;
+		uploadEl.disabled = auth.currentUser === null;
 	} else {
 		// Update UI with last save
 		const lastDoc = querySnapshot.docs[0];
@@ -73,8 +76,10 @@ try {
 			const url = await storageRef
 				.child(lastDoc.id + ".sav")
 				.getDownloadURL();
-			downloadEl.disabled = false;
-			uploadEl.disabled = false;
+			if (auth.currentUser !== null) {
+				downloadEl.disabled = false;
+				uploadEl.disabled = false;
+			}
 
 			downloadEl.addEventListener("click", async () => {
 				await lastDoc.ref.update({
